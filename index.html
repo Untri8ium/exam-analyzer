@@ -211,6 +211,13 @@
         input.min = '0';
         input.max = '100';
 
+        input.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            calculateSum(); // Trigger the same action as clicking "Calculate Sum" button
+          }
+        });
+
         form.appendChild(input);
         formGroup.appendChild(label);
         formGroup.appendChild(form);
