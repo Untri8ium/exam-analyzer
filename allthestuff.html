@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>得点を分析してみよう</title>
+
+  <!-- Add the font embed code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@500&display=swap" rel="stylesheet">
+
+  <!-- Include Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'IBM Plex Sans JP', sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .description-container {
+      background-color: #f2f2f2;
+      border-radius: 20px;
+      padding: 0 20px;
+      margin-bottom: 20px;
+      display: inline-block;
+      max-width: 90%;
+    }
+
+    .description {}
+
+    .form-group {
+      display: inline-block;
+      margin: 0;
+      margin-bottom: 10px;
+    }
+
+    form {
+      margin-top: 10px;
+      padding: 0;
+    }
+
+    input {
+      width: 50px;
+      margin: 5px;
+      padding: 5px;
+      border: none;
+      border-radius: 0;
+      border-bottom: 1px solid #ccc;
+      font-family: 'IBM Plex Sans JP', sans-serif;
+      text-align: center;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      font-family: 'IBM Plex Sans JP', sans-serif;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    canvas {
+      display: block;
+      margin: 20px auto;
+      max-width: 100%;
+      height: auto;
+    }
+
+    #sumDisplay {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+
+    .stats-container {
+      display: flex;
+      justify-content: center; /* Center the boxes */
+      align-items: flex-start; /* Align boxes to the top */
+      margin-top: 20px;
+    }
+
+    .stats-box {
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 0 5px;
+      max-width: 150px;
+    }
+
+    .stats-title {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+
+    .stats-number {
+      font-size: 1em;
+    }
+
+    .alternative-percentage {
+      font-size: 0.7em;
+      margin-top: 5px;
+      color: #555;
+    }
+
+    .stats-ratio {
+      font-size: 0.8em;
+      margin-top: 5px;
+    }
+
+    .stats-set2number {
+      font-size: 0.8em;
+      color: #666;
+    }
+
+    @media only screen and (max-width: 600px) {
+      .form-group {
+        display: block;
+        margin: 0 auto 10px;
+      }
+
+      button {
+        display: block;
+        margin: 0 auto;
+      }
+
+      canvas {
+        max-width: 100%;
+        height: auto;
+      }
+
+      .stats-container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .stats-box {
+        margin-top: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>テスト得点分析</h1>
+
+  <!-- Description below the title -->
+  <div class="description-container">
+    <p class="description">100点満点換算で入力してください。Katyは1問5点の減点法で得点を求めてください。</p>
+  </div>
+
+  <!-- Create form groups dynamically with a loop -->
+  <div id="formGroupsContainer"></div>
+
+  <!-- Button to calculate the sum and display the radar chart -->
+  <button onclick="calculateSum()">計算する！</button>
+
+  <!-- Canvas for the radar chart -->
+  <canvas id="radarChart"></canvas>
+
+  <!-- Display the sum with percentage indicator -->
+  <p id="sumDisplay"></p>
+
+  <!-- Brief stats section -->
+  <div class="stats-container" id="statsContainer"></div>
+
+  <script>
+
+    const dataset1 = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100];
+    const dataset2 = [71, 65, 58, 66, 78, 64, 76, 71, 93, 64, 65, 80];
+
+    function createFormGroups() {
+      const formGroupsContainer = document.getElementById('formGroupsContainer');
+
+      for (let i = 1; i <= 12; i++) {
+        const formGroup = document.createElement('div');
+        formGroup.className = 'form-group';
+
+        const label = document.createElement('label');
+        label.innerHTML = [
+        `数<span style="font-size: 0.75em;"> (三井田)</span>`, 
+        `数<span style="font-size: 0.75em;"> (町田)</span>`, 
+        `数<span style="font-size: 0.75em;"> (佐々木)</span>`,
+        `理<span style="font-size: 0.75em;"> (小沼)</span>`, 
+        `理<span style="font-size: 0.75em;"> (宇田川)</span>`, 
+        `理<span style="font-size: 0.75em;"> (小林)</span>`,
+        `社<span style="font-size: 0.75em;"> (山本)</span>`, 
+        `社<span style="font-size: 0.75em;"> (山田)</span>`, 
+        `英<span style="font-size: 0.75em;"> (合田)</span>`,
+        `英<span style="font-size: 0.75em;"> (鈴木)</span>`, 
+        `音楽`, 
+        `保健`,
+        ][i - 1];
+
+        const form = document.createElement('form');
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'numberInput';
+        input.min = '0';
+        input.max = '100';
+
+        form.appendChild(input);
+        formGroup.appendChild(label);
+        formGroup.appendChild(form);
+        formGroupsContainer.appendChild(formGroup);
+      }
+    }
+
+    createFormGroups();
+
+    function calculateSum() {
+      const numberInputs = document.querySelectorAll('.numberInput');
+      const sumDisplay = document.getElementById('sumDisplay');
+
+      let total = 0;
+
+      numberInputs.forEach(input => {
+        total += parseFloat(input.value) || 0;
+      });
+
+      const percentage = ((total / 1200) * 100).toFixed(2);
+      const dataset2Sum = dataset2.reduce((acc, value) => acc + value, 0);
+      const dataset2Percentage = ((dataset2Sum / 1200) * 100).toFixed(2);
+
+      sumDisplay.innerHTML = `<span style="font-size: 1.5em;">${percentage}%</span><br>${total} <span style="font-size: 0.8em;">/ 1200点</span><br><span style="font-size: 0.6em;">(平均: ${dataset2Percentage}%)</span>`;
+
+      // Destroy the existing radar chart instance
+      const existingChart = Chart.getChart('radarChart');
+      if (existingChart) {
+        existingChart.destroy();
+      }
+
+      updateRadarChart(
+        Array.from(numberInputs).map(input => parseInt(input.value, 10) || 0),
+        dataset1,
+        dataset2
+      );
+
+      updateStatsSection(total, numberInputs);
+    }
+
+    function updateRadarChart(userData, dataset1, dataset2) {
+      const radarChart = new Chart(document.getElementById('radarChart').getContext('2d'), {
+        type: 'radar',
+        data: {
+          labels: Array.from({ length: 12 }, (_, i) => [
+        `数 (三井田)`, 
+        `数 (町田)`, 
+        `数 (佐々木)`,
+        `理 (小沼)`, 
+        `理 (宇田川)`, 
+        `理 (小林)`,
+        `社 (山本)`, 
+        `社 (山田)`, 
+        `英 (合田)`,
+        `英 (鈴木)`, 
+        `音楽`, 
+        `保健`,
+        ][i]),
+          datasets: [{
+              data: userData,
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 2,
+              pointRadius: 5,
+              pointBorderColor: 'rgba(75, 192, 192, 1)',
+              pointBackgroundColor: '#fff',
+              label: '得点'
+            },
+            {
+              data: dataset1,
+              backgroundColor: 'rgba(255, 99, 132, 0.2)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderWidth: 2,
+              pointRadius: 5,
+              pointBorderColor: 'rgba(255, 99, 132, 1)',
+              pointBackgroundColor: '#fff',
+              label: '最高点(概算含む)'
+            },
+            {
+              data: dataset2,
+              backgroundColor: 'rgba(255, 205, 86, 0.2)',
+              borderColor: 'rgba(255, 205, 86, 1)',
+              borderWidth: 2,
+              pointRadius: 5,
+              pointBorderColor: 'rgba(255, 205, 86, 1)',
+              pointBackgroundColor: '#fff',
+              label: '平均点(概算含む)'
+            }
+          ]
+        },
+        options: {
+          scale: {
+            ticks: {
+              beginAtZero: true,
+              stepSize: 20,
+            }
+          }
+        }
+      });
+    }
+
+    function updateStatsSection(total, numberInputs) {
+      const statsContainer = document.getElementById('statsContainer');
+      statsContainer.innerHTML = '';
+
+      const categories = ['数学', '理科', '社会', '英語', '音楽', '保健'];
+      const itemCounts = [3, 3, 2, 2, 1, 1];
+
+      categories.forEach((category, index) => {
+        const startItem = (index === 0) ? 1 : itemCounts.slice(0, index).reduce((acc, val) => acc + val, 0) + 1;
+        const endItem = startItem + itemCounts[index] - 1;
+
+        const categoryInputs = Array.from(numberInputs).slice(startItem - 1, endItem);
+        const categoryTotal = categoryInputs.reduce((acc, input) => acc + parseFloat(input.value) || 0, 0);
+        const categoryNumber = itemCounts[index] * 100;
+
+        const categorySet2 = dataset2.slice(startItem - 1, endItem);
+        console.log(categorySet2);
+        const categorySet2Total = categorySet2.reduce((acc, set2) => acc + set2 || 0, 0);
+        console.log(categoryTotal);
+        console.log(categorySet2Total);
+
+        const statsBox = document.createElement('div');
+        statsBox.className = 'stats-box';
+
+        const categoryTitle = document.createElement('div');
+        categoryTitle.className = 'stats-title';
+        categoryTitle.textContent = category;
+
+        const categoryPercentage = document.createElement('div');
+        categoryPercentage.className = 'stats-number';
+        categoryPercentage.innerHTML = `<span>${((categoryTotal / categoryNumber) * 100).toFixed(0)}%</span><br>`;
+
+        const categorySet2Percentage = document.createElement('div');
+        categorySet2Percentage.className = 'stats-set2number';
+        categorySet2Percentage.textContent = `(平均: ${((categorySet2Total / categoryNumber) * 100).toFixed(0)}%)`
+
+        if (categoryTotal - categorySet2Total > categoryNumber * 0.05){
+          statsBox.style.backgroundColor = "#e0ffe0";
+        }
+        else if (categoryTotal - categorySet2Total < categoryNumber * -0.05){
+          statsBox.style.backgroundColor = "#ffe0e0";
+        }
+
+        const categoryRatio = document.createElement('div');
+        categoryRatio.className = 'stats-ratio';
+        categoryRatio.textContent = `${Math.round(categoryTotal)} / ${categoryNumber}`;
+
+        statsBox.appendChild(categoryTitle);
+        statsBox.appendChild(categoryPercentage);
+        statsBox.appendChild(categorySet2Percentage);
+        statsBox.appendChild(categoryRatio);
+        statsContainer.appendChild(statsBox);
+      });
+    }
+  </script>
+
+</body>
+
+</html>
